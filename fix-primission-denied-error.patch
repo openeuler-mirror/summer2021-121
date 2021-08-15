@@ -1,0 +1,109 @@
+From 45dc510ce78b2360d74ef66b92cb9cfe73038fb2 Mon Sep 17 00:00:00 2001
+From: konglidong <konglidong@uniontech.com>
+Date: Thu, 12 Aug 2021 11:04:23 +0800
+Subject: [PATCH] fix primission denied erroe
+
+---
+ make/photon/core/Dockerfile        | 3 ++-
+ make/photon/db/Dockerfile          | 3 ++-
+ make/photon/jobservice/Dockerfile  | 2 +-
+ make/photon/nginx/Dockerfile       | 4 +++-
+ make/photon/portal/Dockerfile      | 1 +
+ make/photon/registryctl/Dockerfile | 6 +++++-
+ 6 files changed, 14 insertions(+), 5 deletions(-)
+
+diff --git a/make/photon/core/Dockerfile b/make/photon/core/Dockerfile
+index 45884ee..53cd4cc 100644
+--- a/make/photon/core/Dockerfile
++++ b/make/photon/core/Dockerfile
+@@ -10,7 +10,8 @@ COPY ./make/photon/core/harbor_core ./UIVERSION /harbor/
+ COPY ./src/core/views /harbor/views
+ COPY ./make/migrations /harbor/migrations
+ 
+-RUN chmod u+x /harbor/harbor_core
++RUN chmod u+x /harbor/harbor_core \
++    && chmod -R 755 /harbor/
+ WORKDIR /harbor/
+ USER harbor
+ ENTRYPOINT ["/harbor/harbor_core"]
+diff --git a/make/photon/db/Dockerfile b/make/photon/db/Dockerfile
+index b856f09..08165d4 100644
+--- a/make/photon/db/Dockerfile
++++ b/make/photon/db/Dockerfile
+@@ -14,7 +14,8 @@ RUN tdnf install -y shadow gzip postgresql >> /dev/null\
+     && sed -i "s|#unix_socket_directories = '/tmp'.*|unix_socket_directories = '/run/postgresql'|g" /usr/share/postgresql/postgresql.conf.sample \
+     && tdnf clean all
+ 
+-RUN tdnf erase -y toybox && tdnf install -y util-linux net-tools
++RUN tdnf erase -y toybox && tdnf install -y util-linux net-tools \
++    && chmod -R 755 /var/lib/postgresql/
+ 
+ VOLUME /var/lib/postgresql/data
+ 
+diff --git a/make/photon/jobservice/Dockerfile b/make/photon/jobservice/Dockerfile
+index 0789a41..1078a4f 100644
+--- a/make/photon/jobservice/Dockerfile
++++ b/make/photon/jobservice/Dockerfile
+@@ -6,7 +6,7 @@ RUN tdnf install sudo tzdata -y >> /dev/null \
+ 
+ COPY ./make/photon/jobservice/harbor_jobservice /harbor/
+ 
+-RUN chmod u+x /harbor/harbor_jobservice
++RUN chmod u+x /harbor/harbor_jobservice && chmod -R 755 /harbor/
+ 
+ WORKDIR /harbor/
+ 
+diff --git a/make/photon/nginx/Dockerfile b/make/photon/nginx/Dockerfile
+index ab7aada..5599252 100644
+--- a/make/photon/nginx/Dockerfile
++++ b/make/photon/nginx/Dockerfile
+@@ -4,7 +4,9 @@ RUN tdnf install sudo nginx -y >> /dev/null\
+     && tdnf clean all \
+     && groupadd -r -g 10000 nginx && useradd --no-log-init -r -g 10000 -u 10000 nginx \
+     && ln -sf /dev/stdout /var/log/nginx/access.log \
+-    && ln -sf /dev/stderr /var/log/nginx/error.log
++    && ln -sf /dev/stderr /var/log/nginx/error.log \
++    && chmod -R 777 /etc/nginx \
++    && chown -R nginx:nginx /etc/nginx
+ 
+ VOLUME /var/cache/nginx /var/log/nginx /run
+ 
+diff --git a/make/photon/portal/Dockerfile b/make/photon/portal/Dockerfile
+index 1bba734..10972ca 100644
+--- a/make/photon/portal/Dockerfile
++++ b/make/photon/portal/Dockerfile
+@@ -12,6 +12,7 @@ RUN tdnf install -y nginx sudo >> /dev/null \
+     && ln -sf /dev/stderr /var/log/nginx/error.log \
+     && groupadd -r -g 10000 nginx && useradd --no-log-init -r -g 10000 -u 10000 nginx \
+     && chown -R nginx:nginx /etc/nginx \
++    && chmod -R 777 /etc/nginx \
+     && tdnf clean all
+ 
+ EXPOSE 8080
+diff --git a/make/photon/registryctl/Dockerfile b/make/photon/registryctl/Dockerfile
+index 4da0356..b7cb4c5 100644
+--- a/make/photon/registryctl/Dockerfile
++++ b/make/photon/registryctl/Dockerfile
+@@ -6,6 +6,9 @@ RUN tdnf install sudo -y >> /dev/null \
+     && tdnf clean all \
+     && groupadd -r -g 10000 harbor && useradd --no-log-init -r -g 10000 -u 10000 harbor \
+     && mkdir -p /etc/registry \
++    && mkdir -p /etc/registryctl \
++    && chmod -R 777 /etc/registry \
++    && chmod -R 777 /etc/registryctl \
+     && mkdir /harbor/
+ 
+ COPY ./make/photon/common/install_cert.sh /harbor
+@@ -15,7 +18,8 @@ COPY ./make/photon/registryctl/harbor_registryctl /harbor/
+ 
+ RUN chmod u+x /harbor/harbor_registryctl \
+     && chmod u+x /usr/bin/registry \
+-    && chmod u+x /harbor/start.sh
++    && chmod u+x /harbor/start.sh \
++    && chmod -R 777 /harbor
+ 
+ HEALTHCHECK CMD curl --fail -s http://127.0.0.1:8080/api/health || exit 1 
+ 
+-- 
+2.20.1
+
