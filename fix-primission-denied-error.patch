@@ -1,17 +1,39 @@
-From 45dc510ce78b2360d74ef66b92cb9cfe73038fb2 Mon Sep 17 00:00:00 2001
+From 2ff549e69e1e24b0af436c967a34cd2b441534d9 Mon Sep 17 00:00:00 2001
 From: konglidong <konglidong@uniontech.com>
-Date: Thu, 12 Aug 2021 11:04:23 +0800
-Subject: [PATCH] fix primission denied erroe
+Date: Thu, 30 Sep 2021 15:27:23 +0800
+Subject: [PATCH] fix-primission-denied-error
 
 ---
+ make/photon/chartserver/Dockerfile | 2 +-
+ make/photon/clair/Dockerfile       | 1 +
  make/photon/core/Dockerfile        | 3 ++-
- make/photon/db/Dockerfile          | 3 ++-
- make/photon/jobservice/Dockerfile  | 2 +-
+ make/photon/db/Dockerfile          | 4 +++-
+ make/photon/jobservice/Dockerfile  | 3 ++-
  make/photon/nginx/Dockerfile       | 4 +++-
  make/photon/portal/Dockerfile      | 1 +
- make/photon/registryctl/Dockerfile | 6 +++++-
- 6 files changed, 14 insertions(+), 5 deletions(-)
+ make/photon/registryctl/Dockerfile | 8 +++++++-
+ 8 files changed, 20 insertions(+), 6 deletions(-)
 
+diff --git a/make/photon/chartserver/Dockerfile b/make/photon/chartserver/Dockerfile
+index f31c157..326ee10 100644
+--- a/make/photon/chartserver/Dockerfile
++++ b/make/photon/chartserver/Dockerfile
+@@ -19,4 +19,4 @@ RUN chown -R 10000:10000 /chartserver \
+ 
+ HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD curl -sS 127.0.0.1:9999/health || exit 1
+ 
+-ENTRYPOINT ["/docker-entrypoint.sh"]
++ENTRYPOINT ["/docker-entrypoint.sh"]
+\ No newline at end of file
+diff --git a/make/photon/clair/Dockerfile b/make/photon/clair/Dockerfile
+index 1b1e0ce..aded746 100644
+--- a/make/photon/clair/Dockerfile
++++ b/make/photon/clair/Dockerfile
+@@ -23,3 +23,4 @@ RUN chown -R 10000:10000 /clair \
+ HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD curl -sS 127.0.0.1:6061/health || exit 1
+ 
+ ENTRYPOINT ["/docker-entrypoint.sh"]
++
 diff --git a/make/photon/core/Dockerfile b/make/photon/core/Dockerfile
 index 45884ee..53cd4cc 100644
 --- a/make/photon/core/Dockerfile
@@ -27,10 +49,15 @@ index 45884ee..53cd4cc 100644
  USER harbor
  ENTRYPOINT ["/harbor/harbor_core"]
 diff --git a/make/photon/db/Dockerfile b/make/photon/db/Dockerfile
-index b856f09..08165d4 100644
+index b856f09..1c21817 100644
 --- a/make/photon/db/Dockerfile
 +++ b/make/photon/db/Dockerfile
-@@ -14,7 +14,8 @@ RUN tdnf install -y shadow gzip postgresql >> /dev/null\
+@@ -10,11 +10,13 @@ RUN tdnf install -y shadow gzip postgresql >> /dev/null\
+     && chown -R postgres:postgres /run/postgresql \
+     && chmod 2777 /run/postgresql \
+     && mkdir -p "$PGDATA" && chown -R postgres:postgres "$PGDATA" && chmod 777 "$PGDATA" \
++    && chown -R postgres:postgres /var/lib/postgresql && chmod 0777 /var/lib/postgresql \
+     && sed -i "s|#listen_addresses = 'localhost'.*|listen_addresses = '*'|g" /usr/share/postgresql/postgresql.conf.sample \
      && sed -i "s|#unix_socket_directories = '/tmp'.*|unix_socket_directories = '/run/postgresql'|g" /usr/share/postgresql/postgresql.conf.sample \
      && tdnf clean all
  
@@ -41,7 +68,7 @@ index b856f09..08165d4 100644
  VOLUME /var/lib/postgresql/data
  
 diff --git a/make/photon/jobservice/Dockerfile b/make/photon/jobservice/Dockerfile
-index 0789a41..1078a4f 100644
+index 0789a41..d02ac6b 100644
 --- a/make/photon/jobservice/Dockerfile
 +++ b/make/photon/jobservice/Dockerfile
 @@ -6,7 +6,7 @@ RUN tdnf install sudo tzdata -y >> /dev/null \
@@ -53,6 +80,11 @@ index 0789a41..1078a4f 100644
  
  WORKDIR /harbor/
  
+@@ -17,3 +17,4 @@ VOLUME ["/var/log/jobs/"]
+ HEALTHCHECK CMD curl --fail -s http://127.0.0.1:8080/api/v1/stats || exit 1
+ 
+ ENTRYPOINT ["/harbor/harbor_jobservice", "-c", "/etc/jobservice/config.yml"]
++
 diff --git a/make/photon/nginx/Dockerfile b/make/photon/nginx/Dockerfile
 index ab7aada..5599252 100644
 --- a/make/photon/nginx/Dockerfile
@@ -81,10 +113,10 @@ index 1bba734..10972ca 100644
  
  EXPOSE 8080
 diff --git a/make/photon/registryctl/Dockerfile b/make/photon/registryctl/Dockerfile
-index 4da0356..b7cb4c5 100644
+index 4da0356..29e8497 100644
 --- a/make/photon/registryctl/Dockerfile
 +++ b/make/photon/registryctl/Dockerfile
-@@ -6,6 +6,9 @@ RUN tdnf install sudo -y >> /dev/null \
+@@ -6,16 +6,22 @@ RUN tdnf install sudo -y >> /dev/null \
      && tdnf clean all \
      && groupadd -r -g 10000 harbor && useradd --no-log-init -r -g 10000 -u 10000 harbor \
      && mkdir -p /etc/registry \
@@ -94,12 +126,16 @@ index 4da0356..b7cb4c5 100644
      && mkdir /harbor/
  
  COPY ./make/photon/common/install_cert.sh /harbor
-@@ -15,7 +18,8 @@ COPY ./make/photon/registryctl/harbor_registryctl /harbor/
+ COPY ./make/photon/registry/binary/bin/registry /usr/bin
+ COPY ./make/photon/registryctl/start.sh /harbor/
+ COPY ./make/photon/registryctl/harbor_registryctl /harbor/
++COPY ./make/common/config/registryctl/config.yml /etc/registryctl/config.yml
  
  RUN chmod u+x /harbor/harbor_registryctl \
      && chmod u+x /usr/bin/registry \
 -    && chmod u+x /harbor/start.sh
 +    && chmod u+x /harbor/start.sh \
++    && chmod -R 777 /etc/registryctl/* \
 +    && chmod -R 777 /harbor
  
  HEALTHCHECK CMD curl --fail -s http://127.0.0.1:8080/api/health || exit 1 
